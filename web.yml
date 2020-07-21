@@ -1,0 +1,23 @@
+---
+- hosts: web
+  gather_facts: true
+  tasks:
+  
+    - stat: path="~/jobeasy"
+      register: dir_status
+
+    # - shell: "if [ ! -d ~/jobeasy ];then mkdir ~/jobeasy ;fi"
+
+    # - shell: "mkdir ~/jobeasy"
+    #   when: not dir_status.stat.exists
+    
+    - block:
+      - file: path="~/jobeasy" state=absent
+        when: dir_status.stat.exists and not dir_status.stat.isdir
+
+      - file: path="~/jobeasy" state=directory 
+
+
+
+
+    # - debug: var=dir_status
