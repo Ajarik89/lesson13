@@ -1,23 +1,75 @@
 ---
 - hosts: web
   gather_facts: true
+  become: true
+  vars:
+    - dir_path: "~/jobeasy"
   tasks:
-  
-    - stat: path="~/jobeasy"
+    - stat: path="{{ dir_path }}"
       register: dir_status
+      when: method != '0'
 
-    # - shell: "if [ ! -d ~/jobeasy ];then mkdir ~/jobeasy ;fi"
+    - name: If not exists create with shell MKDIR
+      block: 
+      - name: If not exists create with shell MKDIR
+        shell: "if [ ! -d {{ dir_path }} ];then mkdir {{ dir_path }} ;fi"
+      when: method == '1'
 
-    # - shell: "mkdir ~/jobeasy"
-    #   when: not dir_status.stat.exists
-    
-    - block:
-      - file: path="~/jobeasy" state=absent
+    - name: If stat.exists create with shell MKDIR
+      block:
+      - name: If not exists create with shell MKDIR 
+        shell: "mkdir {{ dir_path }}"
+        when: not dir_status.stat.exists
+      when: method == '2'
+   
+    - name: Create folder with ansible
+      block:
+      - name: Create folder with ansible      
+        file: path="{{ dir_path }}" state=directory 
+      when: method == '3'
+
+    - name: Create folder with ansible and recreate if file exists
+      block:
+      - name: Create folder with ansible and recreate if file exists
+        file: path="{{ dir_path }}" state=absent
         when: dir_status.stat.exists and not dir_status.stat.isdir
+      - file: path="{{ dir_path }}" state=directory 
+      when: method == '4'
 
-      - file: path="~/jobeasy" state=directory 
+    - name: Setup Debian Apache2 service
+      block:
+      - name: Install apache (state=present is optional)
+        apt:
+          name: apache2
+          state: present
+        become: true
+
+      - name: Deploy Apache config
+        template:
+          src: apache_site.conf.j2
+          dest: /etc/apache2/sites-available/web-site.conf
+
+      - name: Activate web site
+        file: 
+          src: "/etc/apache2/sites-available/web-site.conf"
+          dest: "/etc/apache2/sites-enabled/web-site.conf"
+          state: link
+
+      when: ansible_distribution == 'Debian'
+
+    - name: Setup Centos HTTPD service
+      block:
+      - name: Install httpd (state=present is optional)
+        yum:
+          name: httpd
+          state: present
+        become: true
+
+      - name: Deploy httpd config
+        template:
+          src: apache_site.conf.j2
+          dest: /etc/httpd/conf.d/web-site.conf
+      when: ansible_distribution == 'CentOS'
 
 
 
-
-    # - debug: var=dir_status
